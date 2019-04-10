@@ -1,56 +1,4 @@
-EMBREE_VER = 3.4.0
-EMBREE_ROOT = $$PWD/../embree/$$EMBREE_VER
-ISPC_VER=1.9.2
-ITT_ROOT = $$PWD/../deps/IntelSEAPI/ittnotify
-
-DEFINES += EMBREE_STATIC_LIB
-
-CONFIG(debug, debug|release): CONFIG += embree_stat_counters
-CONFIG -= embree_ray_masks      # Enables ray mask support.
-CONFIG += embree_ray_packets    # Enabled support for ray packets.
-CONFIG += embree_backface_culling # Enables backface culling
-CONFIG += embree_filter_function  # Enables filter functions
-CONFIG += embree_geom_triangles # Enables support for triangle geometries.
-CONFIG += embree_geom_quads     # Enables support for quad geometries.
-CONFIG += embree_geom_curve     # Enables support for curve geometries
-
-CONFIG += embree_geom_lines     # Enables support for line geometries.
-CONFIG += embree_geom_hair      # Enables support for hair geometries.
-CONFIG += embree_geom_subdiv    # Enables support for subdiv geometries.
-CONFIG += embree_geom_user      # Enables support for user geometries.
-CONFIG += embree_geom_instances # Enables support for instances
-CONFIG += embree_geom_grid      # Enables support for grid geometries
-CONFIG += embree_geom_point     # Enables support for point geometries
-
-CONFIG -= embree_native_curve_bspline # Specifies the spline basis.
-CONFIG -= embree_itt            # Enable instrumentation with the ITT API.
-CONFIG += embree_tasking_tbb    # Tasking type: embree_tasking_tbb|embree_tasking_ppl|embree_tasking_internal
-
-embree_itt {
-    exits($$ITT_ROOT) {
-        DEFINES += RTCORE_ITT
-        INCLUDEPATH += $$ITT_ROOT/include
-    } else {
-        message("*** ITT not found at: '$$ITT_ROOT' - feature will be disabled")
-    }
-}
-
-embree_stat_counters: DEFINES += EMBREE_STAT_COUNTERS
-embree_ray_masks: DEFINES += EMBREE_RAY_MASK
-embree_ray_packets: DEFINES += EMBREE_RAY_PACKETS
-embree_backface_culling: DEFINES += EMBREE_BACKFACE_CULLING
-embree_filter_function: DEFINES += EMBREE_FILTER_FUNCTION
-embree_geom_triangles: DEFINES += EMBREE_GEOMETRY_TRIANGLES
-embree_geom_quads: DEFINES += EMBREE_GEOMETRY_QUADS
-embree_geom_curve: DEFINES += EMBREE_GEOMETRY_CURVE
-embree_geom_lines: DEFINES += EMBREE_GEOMETRY_LINES
-embree_geom_hair: DEFINES += EMBREE_GEOMETRY_HAIR
-embree_geom_subdiv: DEFINES += EMBREE_GEOMETRY_SUBDIV
-embree_geom_user: DEFINES += EMBREE_GEOMETRY_USER
-embree_geom_instances: DEFINES += EMBREE_GEOMETRY_INSTANCES
-embree_geom_grid: DEFINES += EMBREE_GEOMETRY_GRID
-embree_geom_point: DEFINES += EMBREE_GEOMETRY_POINT
-embree_native_curve_bspline: DEFINES += EMBREE_NATIVE_CURVE_BSPLINE
+include("embree_config.pri")
 
 EMBREE_AUTOGEN_CONFIG = config.h hash.h rtcore_version.h
 for(f, EMBREE_AUTOGEN_CONFIG) {
@@ -82,8 +30,21 @@ equals(QMAKE_CXX_NAME, clang++) {
 }
 
 # ISA configuration
+
+SSE2 = 0
+SSE42 = 1
+AVX = 2
+AVX2 = 3
+AVX512KNL = 4
+AVX512SKX = 5
+
+FLAGS_LOWEST = ""
+ISA_LOWEST_AVX = $$AVX
+
 macx {
 	XEON_ISA = "AVX2"
+    ISA_LOWEST = $$SSE42
+    FLAGS_LOWEST = $$FLAGS_SSE42 # Qt's default c++ flags forces minimum sse41
 } else {
 	!equals(QMAKE_CXX_NAME, icc) {
 		XEON_ISA = "AVX2"
@@ -103,11 +64,13 @@ equals(XEON_ISA, "AVX2"): ISA = 8
 equals(XEON_ISA, "AVX512KNL"): ISA = 9
 equals(XEON_ISA, "AVX512SKX"): ISA = 10
 
-FLAGS_LOWEST = $$FLAGS_SSE2
-
 greaterThan(ISA, 0) {
-	CONFIG += target_sse2
+    CONFIG += target_sse2
 	ISPC_TARGETS = "sse2"
+	isEmpty(FLAGS_LOWEST) {
+        ISA_LOWEST = $$SSE2
+        FLAGS_LOWEST = $$FLAGS_SSE2
+	}
 }
 greaterThan(ISA, 1) {
 	CONFIG += target_sse3
@@ -119,30 +82,55 @@ greaterThan(ISA, 3) {
 	CONFIG += target_sse41
 }
 greaterThan(ISA, 4) {
-	CONFIG += target_sse42
+    CONFIG += target_sse42
 	ISPC_TARGETS += "sse4"
-    FLAGS_LOWEST = $$FLAGS_SSE42
+	isEmpty(FLAGS_LOWEST) {
+        ISA_LOWEST = $$SSE42
+        FLAGS_LOWEST = $$FLAGS_SSE42
+    }
+
 }
 greaterThan(ISA, 5) {
-	CONFIG += target_avx
+    CONFIG += target_avx
 	ISPC_TARGETS += "avx"
-    FLAGS_LOWEST = $$FLAGS_AVX
+	isEmpty(FLAGS_LOWEST) {
+        ISA_LOWEST = $$AVX
+        ISA_LOWEST_AVX = $$AVX
+        FLAGS_LOWEST = $$FLAGS_AVX
+    }
 }
 greaterThan(ISA, 7) {
 	CONFIG += target_avx2
 	ISPC_TARGETS += "avx2"
-    FLAGS_LOWEST = $$FLAGS_AVX2
+	isEmpty(FLAGS_LOWEST) {
+        ISA_LOWEST = $$AVX2
+        ISA_LOWEST_AVX = $$AVX2
+        FLAGS_LOWEST = $$FLAGS_AVX2
+    }
 }
 greaterThan(ISA, 8) {
 	CONFIG += target_avx512knl
 	ISPC_TARGETS += "avx512knl-i32x16"
-    FLAGS_LOWEST = $$FLAGS_AVX512KNL
+	isEmpty(FLAGS_LOWEST) {
+        ISA_LOWEST = $$AVX512KNL
+        ISA_LOWEST_AVX = $$AVX512KNL
+        FLAGS_LOWEST = $$FLAGS_AVX512KNL
+    }
 }
 greaterThan(ISA, 9) {
 	CONFIG += target_avx512skx
 	ISPC_TARGETS += "avx512skx-i32x16"
-    FLAGS_LOWEST = $$FLAGS_AVX512SKX
+	isEmpty(FLAGS_LOWEST) {
+        ISA_LOWEST = $$AVX512SKX
+        ISA_LOWEST_AVX = $$AVX512SKX
+        FLAGS_LOWEST = $$FLAGS_AVX512SKX
+    }
 }
+
+message("*** ISA configuration:")
+message("    ISPC_TARGETS = $$ISPC_TARGETS")
+message("    ISA_LOWEST_AVX = $$ISA_LOWEST_AVX")
+message("    FLAGS_LOWEST = $$FLAGS_LOWEST")
 
 QMAKE_CXXFLAGS += $$FLAGS_LOWEST
 
@@ -190,6 +178,7 @@ HEADERS += \
 	$$EMBREE_ROOT/kernels/common/rtcore.h \
 	$$EMBREE_ROOT/kernels/common/scene.h \
 	$$EMBREE_ROOT/kernels/common/scene_curves.h \
+	$$EMBREE_ROOT/kernels/common/scene_points.h \
 	$$EMBREE_ROOT/kernels/common/scene_grid_mesh.h \
 	$$EMBREE_ROOT/kernels/common/scene_instance.h \
 	$$EMBREE_ROOT/kernels/common/scene_line_segments.h \
@@ -319,6 +308,8 @@ EMBREE_LIBRARY_FILES += \
 	$$EMBREE_ROOT/kernels/common/alloc.cpp \
 	$$EMBREE_ROOT/kernels/common/geometry.cpp \
 	$$EMBREE_ROOT/kernels/common/scene_curves.cpp \
+	$$EMBREE_ROOT/kernels/common/scene_points.cpp \
+	$$EMBREE_ROOT/kernels/common/scene_grid_mesh.cpp \
 	$$EMBREE_ROOT/kernels/common/scene_user_geometry.cpp \
 	$$EMBREE_ROOT/kernels/common/scene_instance.cpp \
 	$$EMBREE_ROOT/kernels/common/scene_triangle_mesh.cpp \
@@ -328,10 +319,7 @@ EMBREE_LIBRARY_FILES += \
     $$EMBREE_ROOT/kernels/subdiv/bezier_curve.cpp \
     $$EMBREE_ROOT/kernels/subdiv/bspline_curve.cpp \
     \
-	$$EMBREE_ROOT/kernels/geometry/curve_intersector_virtual.cpp \
 	$$EMBREE_ROOT/kernels/geometry/primitive4.cpp \
-	$$EMBREE_ROOT/kernels/geometry/primitive8.cpp \
-	$$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
 	$$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
 	\
 	$$EMBREE_ROOT/kernels/bvh/bvh.cpp \
@@ -342,20 +330,17 @@ EMBREE_LIBRARY_FILES += \
 	$$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_hair.cpp \
+	$$EMBREE_ROOT/kernels/bvh/bvh_builder_hair_mb.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_morton.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_sah.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_mb.cpp \
-	$$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp \
-	\
-	$$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp
+	$$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp
 
 embree_geom_subdiv: EMBREE_LIBRARY_FILES += \
     $$EMBREE_ROOT/kernels/common/scene_subdiv_mesh.cpp \
-    $$EMBREE_ROOT/kernels/geometry/grid_soa.cpp \
     $$EMBREE_ROOT/kernels/subdiv/tessellation_cache.cpp \
     $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base.cpp \
     $$EMBREE_ROOT/kernels/subdiv/catmullclark_coefficients.cpp \
-    $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base_eval.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_subdiv.cpp
 
 embree_tasking_ppl: EMBREE_LIBRARY_FILES += \
@@ -365,24 +350,6 @@ else:embree_tasking_tbb: EMBREE_LIBRARY_FILES += \
 else: EMBREE_LIBRARY_FILES += \ # embree_tasking_internal
 	$$EMBREE_ROOT/common/tasking/taskschedulerinternal.cpp
 
-embree_ray_packets {
-	EMBREE_LIBRARY_FILES += \
-		$$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
-        $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
-        $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
-}
-
-EMBREE_LIBRARY_FILES_SSE42 += \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp
-embree_ray_packets: EMBREE_LIBRARY_FILES_SSE42 += \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
-
-embree_geom_subdiv: EMBREE_LIBRARY_FILES_SSE42 += \
-    $$EMBREE_ROOT/kernels/geometry/grid_soa.cpp \
-    $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base_eval.cpp
-
 defineReplace(uniqueid) {
     f=$$eval($$1)
     p=$$2
@@ -390,139 +357,227 @@ defineReplace(uniqueid) {
     components = $$split(fn, ".")
     return ($$first(components)$$p)
 }
-UID_LINE2 = "$${LITERAL_HASH}undef MODULE_ID"
+
+UID_LINE = "$${LITERAL_HASH}undef MODULE_ID"
+
+EMBREE_LIBRARY_FILES_SSE42 += \
+    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
+    $$EMBREE_ROOT/kernels/geometry/curve_intersector_virtual.cpp \
+    \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp
+
+embree_ray_packets: EMBREE_LIBRARY_FILES_SSE42 += \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
+
+embree_geom_subdiv: EMBREE_LIBRARY_FILES_SSE42 += \
+    $$EMBREE_ROOT/kernels/common/scene_subdiv_mesh.cpp \
+    $$EMBREE_ROOT/kernels/geometry/grid_soa.cpp \
+    $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base_eval.cpp
 
 target_sse42:!isEmpty(EMBREE_LIBRARY_FILES_SSE42) {
     message("*** Enabling target SSE42")
-    DEFINES += __TARGET_SSE42__
     # make unity build
     UNITY_BUILD_FILE_SSE42 = $$SRC_DIR/target-sse42-unity.cpp
-    write_file($$UNITY_BUILD_FILE_SSE42)
+    INC_FILE = "// target_sse42"
     for(f, EMBREE_LIBRARY_FILES_SSE42) {
-        INC_FILE = "$${LITERAL_HASH}include \"$$f\""
         UID = $$uniqueid(f, "_sse42")
-        UID_LINE = "$${LITERAL_HASH}define MODULE_ID $$UID"
-        write_file($$UNITY_BUILD_FILE_SSE42, UID_LINE2, append)
-        write_file($$UNITY_BUILD_FILE_SSE42, UID_LINE, append)
-        write_file($$UNITY_BUILD_FILE_SSE42, INC_FILE, append)
+        INC_FILE += $$UID_LINE
+        INC_FILE += "$${LITERAL_HASH}define MODULE_ID $$UID"
+        INC_FILE += "$${LITERAL_HASH}include \"$$f\""
+    }
+    # get new content
+    write_file($$SRC_DIR/.tmp, INC_FILE)
+    _tmp = $$cat($$SRC_DIR/.tmp, blob)
+    # compare new content with current file
+    _content = $$cat($$UNITY_BUILD_FILE_SSE42, blob)
+    !equals(_tmp, $$_content) {
+        message("*** File changed")
+        write_file($$UNITY_BUILD_FILE_SSE42, INC_FILE)
     }
     # build sub-object target
     sse42_target.name = Unity build file ${QMAKE_FILE_IN} for SSE42
     sse42_target.input = UNITY_BUILD_FILE_SSE42
     sse42_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    sse42_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) $${FLAGS_SSE42} -D__TARGET_SSE42__ -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    sse42_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_SSE42} -DEMBREE_TARGET_SSE42 -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     sse42_target.CONFIG +=
     sse42_target.variable_out = OBJECTS
     QMAKE_EXTRA_COMPILERS += sse42_target
 }
 
 EMBREE_LIBRARY_FILES_AVX += \
+    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
+    $$EMBREE_ROOT/kernels/geometry/curve_intersector_virtual.cpp \
+    \
+    $$EMBREE_ROOT/kernels/common/scene_user_geometry.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_instance.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_triangle_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_quad_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_curves.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_line_segments.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_grid_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_points.cpp \
+    \
     $$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
+    \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_hair.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_hair_mb.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_morton.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_mb.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_spatial.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp \
-    \
+    $$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_statistics.cpp
 
+equals(ISA_LOWEST_AVX, $$AVX): EMBREE_LIBRARY_FILES_AVX += \
+	$$EMBREE_ROOT/kernels/geometry/primitive8.cpp
+
 embree_ray_packets: EMBREE_LIBRARY_FILES_AVX += \
-    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
-	\
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh8.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh8.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh8.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh8.cpp
 
 embree_geom_subdiv: EMBREE_LIBRARY_FILES_AVX += \
+  $$EMBREE_ROOT/kernels/common/scene_subdiv_mesh.cpp \
   $$EMBREE_ROOT/kernels/geometry/grid_soa.cpp \
-  $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base_eval.cpp \
-  $$EMBREE_ROOT/kernels/bvh/bvh_builder_subdiv.cpp
+  $$EMBREE_ROOT/kernels/bvh/bvh_builder_subdiv.cpp \
+  $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base_eval.cpp
 
 target_avx:!isEmpty(EMBREE_LIBRARY_FILES_AVX) {
     message("*** Enabling target AVX")
-    DEFINES += __TARGET_AVX__
     # make unity build
     UNITY_BUILD_FILE_AVX = $$SRC_DIR/target-avx-unity.cpp
-    write_file($$UNITY_BUILD_FILE_AVX)
+    INC_FILE = "// target_avx"
     for(f, EMBREE_LIBRARY_FILES_AVX) {
-        INC_FILE = "$${LITERAL_HASH}include \"$$f\""
         UID = $$uniqueid(f, "_avx")
-        UID_LINE = "$${LITERAL_HASH}define MODULE_ID $$UID"
-        write_file($$UNITY_BUILD_FILE_AVX, UID_LINE2, append)
-        write_file($$UNITY_BUILD_FILE_AVX, UID_LINE, append)
-        write_file($$UNITY_BUILD_FILE_AVX, INC_FILE, append)
+        INC_FILE += $$UID_LINE
+        INC_FILE += "$${LITERAL_HASH}define MODULE_ID $$UID"
+        INC_FILE += "$${LITERAL_HASH}include \"$$f\""
+    }
+    # get new content
+    write_file($$SRC_DIR/.tmp, INC_FILE)
+    _tmp = $$cat($$SRC_DIR/.tmp, blob)
+    # compare new content with current file
+    _content = $$cat($$UNITY_BUILD_FILE_AVX, blob)
+    !equals(_tmp, $$_content) {
+        message("*** File changed")
+        write_file($$UNITY_BUILD_FILE_AVX, INC_FILE)
     }
     # build sub-object target
     avx_target.name = Unity build file ${QMAKE_FILE_IN} for AVX
     avx_target.input = UNITY_BUILD_FILE_AVX
     avx_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    avx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) $${FLAGS_AVX} -D__TARGET_AVX__ -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    avx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX} -DEMBREE_TARGET_AVX -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx_target.CONFIG +=
     avx_target.variable_out = OBJECTS
     QMAKE_EXTRA_COMPILERS += avx_target
 }
 
 EMBREE_LIBRARY_FILES_AVX2 += \
+    $$EMBREE_ROOT/kernels/common/scene_user_geometry.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_instance.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_triangle_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_quad_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_curves.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_line_segments.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_grid_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_points.cpp \
+    \
+    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
+    $$EMBREE_ROOT/kernels/geometry/curve_intersector_virtual.cpp \
+    \
     $$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
+    \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_hair.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_hair_mb.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_morton.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_mb.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_spatial.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
+
+equals(ISA_LOWEST_AVX, $$AVX2): EMBREE_LIBRARY_FILES_AVX2 += \
+	$$EMBREE_ROOT/kernels/geometry/primitive8.cpp
 
 embree_geom_subdiv: EMBREE_LIBRARY_FILES_AVX2 += \
+    $$EMBREE_ROOT/kernels/common/scene_subdiv_mesh.cpp \
     $$EMBREE_ROOT/kernels/geometry/grid_soa.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_subdiv.cpp \
     $$EMBREE_ROOT/kernels/subdiv/subdivpatch1base_eval.cpp
 
 embree_ray_packets: EMBREE_LIBRARY_FILES_AVX2 += \
-    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
-	\
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh8.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh8.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh8.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
 
 target_avx2:!isEmpty(EMBREE_LIBRARY_FILES_AVX2): {
     message("*** Enabling target AVX2")
-    DEFINES += __TARGET_AVX2__
     UNITY_BUILD_FILE_AVX2 = $$SRC_DIR/target-avx2-unity.cpp
-    write_file($$UNITY_BUILD_FILE_AVX2)
+    INC_FILE = "// target_avx2"
     for(f, EMBREE_LIBRARY_FILES_AVX2) {
-        INC_FILE = "$${LITERAL_HASH}include \"$$f\""
         UID = $$uniqueid(f, "_avx2")
-        UID_LINE = "$${LITERAL_HASH}define MODULE_ID $$UID"
-        write_file($$UNITY_BUILD_FILE_AVX2, UID_LINE2, append)
-        write_file($$UNITY_BUILD_FILE_AVX2, UID_LINE, append)
-        write_file($$UNITY_BUILD_FILE_AVX2, INC_FILE, append)
+        INC_FILE += $$UID_LINE
+        INC_FILE += "$${LITERAL_HASH}define MODULE_ID $$UID"
+        INC_FILE += "$${LITERAL_HASH}include \"$$f\""
+    }
+    # get new content
+    write_file($$SRC_DIR/.tmp, INC_FILE)
+    _tmp = $$cat($$SRC_DIR/.tmp, blob)
+    # compare new content with current file
+    _content = $$cat($$UNITY_BUILD_FILE_AVX2, blob)
+    !equals(_tmp, $$_content) {
+        message("*** File changed")
+        write_file($$UNITY_BUILD_FILE_AVX2, INC_FILE)
     }
     # build sub-object target
     avx2_target.name = Unity build file ${QMAKE_FILE_IN} for AVX2
     avx2_target.input = UNITY_BUILD_FILE_AVX2
     avx2_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    avx2_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) $${FLAGS_AVX2} -D__TARGET_AVX2__ -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    avx2_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX2} -DEMBREE_TARGET_AVX2 -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx2_target.CONFIG +=
     avx2_target.variable_out = OBJECTS
     QMAKE_EXTRA_COMPILERS += avx2_target
 }
 
 EMBREE_LIBRARY_FILES_AVX512KNL += \
+    $$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
+    \
+    $$EMBREE_ROOT/kernels/common/scene_user_geometry.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_instance.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_triangle_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_quad_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_curves.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_line_segments.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_grid_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_points.cpp \
+    \
+    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
+    \
     $$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp \
-    \
-    $$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp \
@@ -535,53 +590,69 @@ embree_geom_subdiv: EMBREE_LIBRARY_FILES_AVX512KNL += \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_subdiv.cpp
 
 embree_ray_packets: EMBREE_LIBRARY_FILES_AVX512KNL += \
-    $$EMBREE_ROOT/kernels/xeon/geometry/instance_intersector.cpp \
-	\
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid16_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh8.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh8.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid16_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid16_bvh8.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh8.cpp \
-   	$$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
 
 target_avx512knl:!isEmpty(EMBREE_LIBRARY_FILES_AVX512KNL) {
     message("*** Enabling target AVX512KNL")
-    DEFINES += __TARGET_AVX512KNL__
+    DEFINES += EMBREE_TARGET_AVX512KNL
     UNITY_BUILD_FILE_AVX512KNL = $$SRC_DIR/target-avx512knl-unity.cpp
-    write_file($$UNITY_BUILD_FILE_AVX512KNL)
+    INC_FILE = "// target_avx512knl"
     for(f, EMBREE_LIBRARY_FILES_AVX512KNL) {
-        INC_FILE = "$${LITERAL_HASH}include \"$$f\""
         UID = $$uniqueid(f, "_avx512")
-        UID_LINE = "$${LITERAL_HASH}define MODULE_ID $$UID"
-        write_file($$UNITY_BUILD_FILE_AVX512KNL, UID_LINE2, append)
-        write_file($$UNITY_BUILD_FILE_AVX512KNL, UID_LINE, append)
-        write_file($$UNITY_BUILD_FILE_AVX512KNL, INC_FILE, append)
+        INC_FILE += $$UID_LINE
+        INC_FILE += "$${LITERAL_HASH}define MODULE_ID $$UID"
+        INC_FILE += "$${LITERAL_HASH}include \"$$f\""
+    }
+    # get new content
+    write_file($$SRC_DIR/.tmp, INC_FILE)
+    _tmp = $$cat($$SRC_DIR/.tmp, blob)
+    # compare new content with current file
+    _content = $$cat($$UNITY_BUILD_FILE_AVX512KNL, blob)
+    !equals(_tmp, $$_content) {
+        message("*** File changed")
+        write_file($$UNITY_BUILD_FILE_AVX512KNL, INC_FILE)
     }
     # build sub-object target
     avx512knl_target.name = Unity build file ${QMAKE_FILE_IN} for AVX512KNL
     avx512knl_target.input = UNITY_BUILD_FILE_AVX512KNL
     avx512knl_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    avx512knl_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) $${FLAGS_AVX512KNL} -D__TARGET_AVX512KNL__ -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    avx512knl_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX512KNL} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx512knl_target.CONFIG +=
     avx512knl_target.variable_out = OBJECTS
     QMAKE_EXTRA_COMPILERS += avx512knl_target
 }
 
 EMBREE_LIBRARY_FILES_AVX512SKX += \
-    $$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp \
-    \
     $$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
+    \
+    $$EMBREE_ROOT/kernels/common/scene_user_geometry.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_instance.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_triangle_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_quad_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_curves.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_line_segments.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_grid_mesh.cpp \
+    $$EMBREE_ROOT/kernels/common/scene_points.cpp \
+    \
+    $$EMBREE_ROOT/kernels/geometry/instance_intersector.cpp \
+    \
+    $$EMBREE_ROOT/kernels/bvh/bvh_refit.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_instancing.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_builder_morton.cpp
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_morton.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp
 
 embree_geom_subdiv: EMBREE_LIBRARY_FILES_AVX512SKX += \
     $$EMBREE_ROOT/kernels/geometry/grid_soa.cpp \
@@ -589,36 +660,41 @@ embree_geom_subdiv: EMBREE_LIBRARY_FILES_AVX512SKX += \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder_subdiv.cpp
 
 embree_ray_packets: EMBREE_LIBRARY_FILES_AVX512SKX += \
-    $$EMBREE_ROOT/kernels/xeon/geometry/instance_intersector.cpp \
-	\
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh4.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid16_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid4_bvh8.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid8_bvh8.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid16_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_hybrid16_bvh8.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_bvh8.cpp \
-   	$$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
+    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
 
 target_avx512skx:!isEmpty(EMBREE_LIBRARY_FILES_AVX512SKX) {
     message("*** Enabling target AVX512SKX")
-    DEFINES += __TARGET_AVX512SKX__
+    DEFINES += EMBREE_TARGET_AVX512SKX
     UNITY_BUILD_FILE_AVX512SKX = $$SRC_DIR/target-avx512skx-unity.cpp
-    write_file($$UNITY_BUILD_FILE_AVX512SKX)
+    INC_FILE = "// target_avx512skx"
     for(f, EMBREE_LIBRARY_FILES_AVX512SKX) {
-        INC_FILE = "$${LITERAL_HASH}include \"$$f\""
         UID = $$uniqueid(f, "_avx512")
-        UID_LINE = "$${LITERAL_HASH}define MODULE_ID $$UID"
-        write_file($$UNITY_BUILD_FILE_AVX512SKX, UID_LINE2, append)
-        write_file($$UNITY_BUILD_FILE_AVX512SKX, UID_LINE, append)
-        write_file($$UNITY_BUILD_FILE_AVX512SKX, INC_FILE, append)
+        INC_FILE += $$UID_LINE
+        INC_FILE += "$${LITERAL_HASH}define MODULE_ID $$UID"
+        INC_FILE += "$${LITERAL_HASH}include \"$$f\""
+    }
+    # get new content
+    write_file($$SRC_DIR/.tmp, INC_FILE)
+    _tmp = $$cat($$SRC_DIR/.tmp, blob)
+    # compare new content with current file
+    _content = $$cat($$UNITY_BUILD_FILE_AVX512SKX, blob)
+    !equals(_tmp, $$_content) {
+        message("*** File changed")
+        write_file($$UNITY_BUILD_FILE_AVX512SKX, INC_FILE)
     }
     # build sub-object target
     avx512skx_target.name = Unity build file ${QMAKE_FILE_IN} for AVX512SKX
     avx512skx_target.input = UNITY_BUILD_FILE_AVX512SKX
     avx512skx_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    avx512skx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) $${FLAGS_AVX512KNL} -D__TARGET_AVX512SKX__ -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    avx512skx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX512KNL} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx512skx_target.CONFIG +=
     avx512skx_target.variable_out = OBJECTS
     QMAKE_EXTRA_COMPILERS += avx512skx_target
@@ -869,5 +945,21 @@ for(f, _fix) {
         _line += "$${LITERAL_HASH}include \"$$_inc\""
         system("$$QMAKE_COPY \"$$f\" \"$$_inc\"")
         write_file($$f, _line)
+    }
+}
+
+# fix EMBREE_LOWEST_ISA conditions
+_fix = \
+    $$EMBREE_ROOT/kernels/common/scene_subdiv_mesh.cpp
+for(f, _fix) {
+    _content = $$cat($$f, blob)
+    _match = $$find(_content, "// EMBREE_LOWEST_ISA")
+    isEmpty(_match) {
+        message("Fixing EMBREE_LOWEST_ISA: $$basename(f)")
+        _content = $$replace(_content, "$${LITERAL_HASH}endif\n", "$${LITERAL_HASH}else // EMBREE_LOWEST_ISA")
+        _content = $$replace(_content, "\n\\}\n", "")
+        _content += "$${LITERAL_HASH}endif // EMBREE_LOWEST_ISA"
+        _content += "}"
+        write_file($$f, _content)
     }
 }
