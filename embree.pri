@@ -320,6 +320,7 @@ EMBREE_LIBRARY_FILES += \
     $$EMBREE_ROOT/kernels/subdiv/bspline_curve.cpp \
     \
 	$$EMBREE_ROOT/kernels/geometry/primitive4.cpp \
+	\
 	$$EMBREE_ROOT/kernels/builders/primrefgen.cpp \
 	\
 	$$EMBREE_ROOT/kernels/bvh/bvh.cpp \
@@ -333,6 +334,7 @@ EMBREE_LIBRARY_FILES += \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_hair_mb.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_morton.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_sah.cpp \
+    $$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_spatial.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_sah_mb.cpp \
 	$$EMBREE_ROOT/kernels/bvh/bvh_builder_twolevel.cpp
 
@@ -378,6 +380,7 @@ embree_geom_subdiv: EMBREE_LIBRARY_FILES_SSE42 += \
 
 target_sse42:!isEmpty(EMBREE_LIBRARY_FILES_SSE42) {
     message("*** Enabling target SSE42")
+    DEFINES += EMBREE_TARGET_SSE42
     # make unity build
     UNITY_BUILD_FILE_SSE42 = $$SRC_DIR/target-sse42-unity.cpp
     INC_FILE = "// target_sse42"
@@ -400,9 +403,10 @@ target_sse42:!isEmpty(EMBREE_LIBRARY_FILES_SSE42) {
     sse42_target.name = Unity build file ${QMAKE_FILE_IN} for SSE42
     sse42_target.input = UNITY_BUILD_FILE_SSE42
     sse42_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    sse42_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_SSE42} -DEMBREE_TARGET_SSE42 -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    sse42_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_SSE42} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     sse42_target.CONFIG +=
     sse42_target.variable_out = OBJECTS
+    sse42_target.depends = $${EMBREE_LIBRARY_FILES_SSE42}
     QMAKE_EXTRA_COMPILERS += sse42_target
 }
 
@@ -456,6 +460,7 @@ embree_geom_subdiv: EMBREE_LIBRARY_FILES_AVX += \
 
 target_avx:!isEmpty(EMBREE_LIBRARY_FILES_AVX) {
     message("*** Enabling target AVX")
+    DEFINES += EMBREE_TARGET_AVX
     # make unity build
     UNITY_BUILD_FILE_AVX = $$SRC_DIR/target-avx-unity.cpp
     INC_FILE = "// target_avx"
@@ -478,9 +483,10 @@ target_avx:!isEmpty(EMBREE_LIBRARY_FILES_AVX) {
     avx_target.name = Unity build file ${QMAKE_FILE_IN} for AVX
     avx_target.input = UNITY_BUILD_FILE_AVX
     avx_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    avx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX} -DEMBREE_TARGET_AVX -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    avx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx_target.CONFIG +=
     avx_target.variable_out = OBJECTS
+    avx_target.depends = $${EMBREE_LIBRARY_FILES_AVX}
     QMAKE_EXTRA_COMPILERS += avx_target
 }
 
@@ -511,7 +517,7 @@ EMBREE_LIBRARY_FILES_AVX2 += \
     $$EMBREE_ROOT/kernels/bvh/bvh_rotate.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh4.cpp \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1_bvh8.cpp \
-    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
+#    $$EMBREE_ROOT/kernels/bvh/bvh_intersector_stream_filters.cpp
 
 equals(ISA_LOWEST_AVX, $$AVX2): EMBREE_LIBRARY_FILES_AVX2 += \
 	$$EMBREE_ROOT/kernels/geometry/primitive8.cpp
@@ -533,6 +539,8 @@ embree_ray_packets: EMBREE_LIBRARY_FILES_AVX2 += \
 
 target_avx2:!isEmpty(EMBREE_LIBRARY_FILES_AVX2): {
     message("*** Enabling target AVX2")
+    DEFINES += EMBREE_TARGET_AVX2
+    # make unity build
     UNITY_BUILD_FILE_AVX2 = $$SRC_DIR/target-avx2-unity.cpp
     INC_FILE = "// target_avx2"
     for(f, EMBREE_LIBRARY_FILES_AVX2) {
@@ -554,9 +562,10 @@ target_avx2:!isEmpty(EMBREE_LIBRARY_FILES_AVX2): {
     avx2_target.name = Unity build file ${QMAKE_FILE_IN} for AVX2
     avx2_target.input = UNITY_BUILD_FILE_AVX2
     avx2_target.output = $${OBJECTS_DIR}/${QMAKE_FILE_IN_BASE}$${OBJECTS_EXT}
-    avx2_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX2} -DEMBREE_TARGET_AVX2 -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
+    avx2_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX2} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx2_target.CONFIG +=
     avx2_target.variable_out = OBJECTS
+    avx2_target.depends = $${EMBREE_LIBRARY_FILES_AVX2}
     QMAKE_EXTRA_COMPILERS += avx2_target
 }
 
@@ -603,6 +612,7 @@ embree_ray_packets: EMBREE_LIBRARY_FILES_AVX512KNL += \
 target_avx512knl:!isEmpty(EMBREE_LIBRARY_FILES_AVX512KNL) {
     message("*** Enabling target AVX512KNL")
     DEFINES += EMBREE_TARGET_AVX512KNL
+    # make unity build
     UNITY_BUILD_FILE_AVX512KNL = $$SRC_DIR/target-avx512knl-unity.cpp
     INC_FILE = "// target_avx512knl"
     for(f, EMBREE_LIBRARY_FILES_AVX512KNL) {
@@ -627,6 +637,7 @@ target_avx512knl:!isEmpty(EMBREE_LIBRARY_FILES_AVX512KNL) {
     avx512knl_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX512KNL} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx512knl_target.CONFIG +=
     avx512knl_target.variable_out = OBJECTS
+    avx512knl_target.depends = $${EMBREE_LIBRARY_FILES_AVX512KNL}
     QMAKE_EXTRA_COMPILERS += avx512knl_target
 }
 
@@ -673,6 +684,7 @@ embree_ray_packets: EMBREE_LIBRARY_FILES_AVX512SKX += \
 target_avx512skx:!isEmpty(EMBREE_LIBRARY_FILES_AVX512SKX) {
     message("*** Enabling target AVX512SKX")
     DEFINES += EMBREE_TARGET_AVX512SKX
+    # make unity build
     UNITY_BUILD_FILE_AVX512SKX = $$SRC_DIR/target-avx512skx-unity.cpp
     INC_FILE = "// target_avx512skx"
     for(f, EMBREE_LIBRARY_FILES_AVX512SKX) {
@@ -697,6 +709,7 @@ target_avx512skx:!isEmpty(EMBREE_LIBRARY_FILES_AVX512SKX) {
     avx512skx_target.commands = $(CXX) $(CXXFLAGS) $(INCPATH) -UEMBREE_LOWEST_ISA $${FLAGS_AVX512KNL} -c -o ${QMAKE_FILE_OUT} ${QMAKE_FILE_IN}
     avx512skx_target.CONFIG +=
     avx512skx_target.variable_out = OBJECTS
+    avx512skx_target.depends = $${EMBREE_LIBRARY_FILES_AVX512SKX}
     QMAKE_EXTRA_COMPILERS += avx512skx_target
 }
 
@@ -776,6 +789,7 @@ HEADERS += \
 	$$EMBREE_ROOT/common/tasking/taskschedulertbb.h
 
 SOURCES += \
+	$$EMBREE_ROOT/common/math/constants.cpp \
 	$$EMBREE_ROOT/common/lexers/stringstream.cpp \
 	$$EMBREE_ROOT/common/lexers/tokenstream.cpp \
 	$$EMBREE_ROOT/common/simd/sse.cpp \
@@ -811,8 +825,8 @@ SOURCES += $$_dups_file
 
 # Intel SMPD compiler (ISPC)
 
-macx: ISPC_EXECUTABLE = ../deps/ispc/ispc-v$${ISPC_VER}-osx
-linux: ISPC_EXECUTABLE = ../deps/ispc/ispc-v$${ISPC_VER}-linux
+macx: ISPC_EXECUTABLE = $$PWD/../deps/ispc/ispc-v$${ISPC_VER}-osx
+linux: ISPC_EXECUTABLE = $$PWD/../deps/ispc/ispc-v$${ISPC_VER}-linux
 
 !exists($$ISPC_EXECUTABLE) {
 	error("*** Cannot find ispc executable (v$${ISPC_VER})")
@@ -868,8 +882,8 @@ ispc_compile.commands = \
       -MMM  $$ISPC_DIR/${QMAKE_FILE_BASE}.dev.idep \
       -o $$ISPC_DIR/${QMAKE_FILE_BASE}.dev$${ISPC_TARGET_EXT} \
       ${QMAKE_FILE_IN}
-mac {
-    FIX_OSX_MIN = $(HOME)/Private/Projekty/_developerTools/cpu+asm/patch_lc_version_min_iphoneos.py
+macx {
+    FIX_OSX_MIN = $(HOME)/Private/Projekty/0.shared/common-dev-tools/bin/patch_lc_version_min_osx.py
     exists($$FIX_OSX_MIN) {
         ispc_compile.commands += ;$$FIX_OSX_MIN $$ISPC_DIR/${QMAKE_FILE_BASE}.dev$${ISPC_TARGET_EXT}
         for(ispc_target, ISPC_TARGETS) {
@@ -932,7 +946,7 @@ for(f, _fix) {
     }
 }
 
-# add once guarde
+# add once guarde for included headers and sources:
 _fix = \
     $$EMBREE_ROOT/kernels/bvh/bvh_builder.h \
     $$EMBREE_ROOT/kernels/bvh/bvh_intersector1.cpp \

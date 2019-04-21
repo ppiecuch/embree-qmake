@@ -3,9 +3,7 @@ OSPRAY_ROOT = $$PWD/../ospray
 OSPRAY_TILE_SIZE = 64               # Tile size
 OSPRAY_PIXELS_PER_JOB = 64          # Must be multiple of largest vector width *and* <= OSPRAY_TILE_SIZE
 CONFIG += exp_new_bb_volume_kernels # Experimental new block/bricked volume layout
-CONFIG -= with_hdf5                 # For importAMRChombo.cpp
-CONFIG -= with_vtk                  # For importUnstructuredVolume.cpp
-CONFIG -= with_app_source           # Common apps source code
+# CONFIG += with_app_source         # Common apps source code
 
 DEFINES += OSPRAY_ENABLE_STATIC_LIB
 exp_new_bb_volume_kernels: DEFINES += EXP_NEW_BB_VOLUME_KERNELS

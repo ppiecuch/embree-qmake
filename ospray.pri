@@ -270,6 +270,9 @@ COMMON_OSP_SOURCES = \
   $$OSPRAY_ROOT/components/ospcommon/utility/TimeStamp.cpp \
   $$OSPRAY_ROOT/components/ospcommon/xml/XML.cpp
 
+HEADERS += \
+  $$OSPRAY_ROOT/components/ospcommon/library.h
+
 message("*** Building common-ospray sources")
 UNITY_BUILD_FILE_COMMON_OSP = $$SRC_DIR/common-osp-unity.cpp
 INC_FILE = "// common-ospray sources"
@@ -297,35 +300,25 @@ exists($$EMBREE_QT) {
 }
 
 APP_COMMON_OSP_SOURCES += \
-  \
-  $$OSPRAY_ROOT/apps/common/ospapp/OSPApp.cpp \
-  \
-  $$OSPRAY_ROOT/apps/common/sg/Renderer.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/SceneGraph.cpp \
-  \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importOBJ.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importOSP.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importOSPSG.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importOSX.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importPLY.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importRIVL.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importX3D.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importXYZ.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/importer/Importer.cpp \
-  \
-  $$OSPRAY_ROOT/apps/common/sg/camera/OrthographicCamera.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/camera/PanoramicCamera.cpp \
-  $$OSPRAY_ROOT/apps/common/sg/camera/PerspectiveCamera.cpp \
-  \
-  $$OSPRAY_ROOT/apps/common/sg/3rdParty/ply.cpp \
-  \
   $$OSPRAY_ROOT/apps/common/tfn_lib/jsoncpp.cpp \
-  $$OSPRAY_ROOT/apps/common/tfn_lib/tfn_lib.cpp
-
-with_hdf5: APP_COMMON_OSP_SOURCES += \
-    $$OSPRAY_ROOT/apps/common/sg/importer/importAMRChombo.cpp
-with_vtk: APP_COMMON_OSP_SOURCES += \
-  $$OSPRAY_ROOT/apps/common/sg/importer/importUnstructuredVolume.cpp
+  $$OSPRAY_ROOT/apps/common/tfn_lib/tfn_lib.cpp \
+  \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/ospray_testing.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/geometry/RandomSpheres.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/geometry/SubdivisionCube.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/lights/AmbientOnly.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/lights/AmbientAndDirectional.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/transferFunction/Grayscale.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/transferFunction/Jet.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/transferFunction/RGB.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/transferFunction/TransferFunction.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/volume/GravitySpheresVolume.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/volume/SimpleStructuredVolume.cpp \
+  $$OSPRAY_ROOT/apps/common/ospray_testing/volume/SimpleUnstructuredVolume.cpp \
+  \
+  $$OSPRAY_ROOT/apps/exampleViewer/common/imgui/imgui.cpp \
+  $$OSPRAY_ROOT/apps/exampleViewer/common/imgui/imgui_draw.cpp \
+  $$OSPRAY_ROOT/apps/exampleViewer/widgets/imgui_impl_qt_gl2.cpp
 
 message("*** Building app-common-ospray sources")
 UNITY_BUILD_FILE_APP_COMMON_OSP = $$SRC_DIR/app-common-osp-unity.cpp
@@ -343,12 +336,18 @@ _content = $$cat($$UNITY_BUILD_FILE_APP_COMMON_OSP, blob)
     write_file($$UNITY_BUILD_FILE_APP_COMMON_OSP, INC_FILE)
 }
 
-with_app_source: {
+with_app_source {
+  message("*** Including app-common-ospray module")
   SOURCES += $$UNITY_BUILD_FILE_APP_COMMON_OSP
   HEADERS += \
-    $$OSPRAY_ROOT/apps/common/sg/Renderer.h \
-    $$OSPRAY_ROOT/apps/common/sg/SceneGraph.h \
-    $$OSPRAY_ROOT/apps/common/sg/importer/Importer.h \
+    $$OSPRAY_ROOT/apps/common/ospray_testing/ospray_testing.h \
     \
     $$OSPRAY_ROOT/apps/common/tfn_lib/tfn_lib.h \
+    \
+    $$OSPRAY_ROOT/apps/exampleViewer/widgets/imgui_impl_qt_gl2.h
+  INCLUDEPATH += \
+    $$OSPRAY_ROOT/apps/common/ospray_testing \
+    \
+    $$OSPRAY_ROOT/apps/exampleViewer/common/imgui \
+    $$OSPRAY_ROOT/apps/exampleViewer/widgets
 }
